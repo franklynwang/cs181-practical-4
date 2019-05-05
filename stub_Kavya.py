@@ -55,10 +55,13 @@ class QLearner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        self.Q = list(np.zeros((60,20,40,20,2,2), dtype='double'))
+        temp = np.zeros((60,20,40,20,2,2))
+        #temp.fill(50.0)
+        self.Q = list(temp)
         self.frameNumber = 0
         self.learningRate = 0.9
         self.epsilon = 0.3
+        self.discount = 0.99999999
 
     def reset(self):
         self.last_state = None
@@ -74,6 +77,12 @@ class QLearner(object):
     def updateQ(self, state, action, val):
         self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][int(action)] = val
 
+    def setLR(self, lr):
+        self.learningRate = lr
+
+    def setQ(self, q):
+        self.Q = list(q)
+
     def action_callback(self, state):
         '''
         Implement this function to learn things and take actions.
@@ -87,13 +96,7 @@ class QLearner(object):
 
         self.frameNumber += 1
 
-        if(self.frameNumber == 500):
-            self.learningRate = 0.7
-            self.epsilon = 0.2
-
-        if (self.frameNumber == 1000):
-            self.learningRate = 0.5
-            self.epsilon = 0.1
+        self.epsilon = 0.1
 
         if(self.frameNumber == 1):
             self.frameOneVelocity = state['monkey']['vel']
@@ -124,9 +127,13 @@ class QLearner(object):
         currentState = [index1, index2, index3, index4, int(self.gravity)]
         print(self.last_state)
         print(self.last_action)
-        actionVals = [self.last_reward + self.accessQ(currentState, a) for a in range(0,2)]
+        actionVals = [self.last_reward + self.discount*self.accessQ(currentState, a) for a in range(0,2)]
 
-        self.updateQ(self.last_state, self.last_action, (1-self.learningRate)*self.accessQ(currentState, self.last_action) + self.learningRate*max(actionVals))
+        print("THE Q VALUE was: " + str(self.accessQ(self.last_state, self.last_action)))
+        self.updateQ(self.last_state, self.last_action, (1-self.learningRate)*self.accessQ(self.last_state, self.last_action) + self.learningRate*max(actionVals))
+
+        if(npr.random() < 0.2):
+            print("THE Q VALUE HAS BEEN UPDATED TO: " + str(self.accessQ(self.last_state, self.last_action)))
 
         if(npr.random() < self.epsilon):
             new_action = npr.randint(0,1)
@@ -149,6 +156,7 @@ def run_games(learner, hist, iters = 100, t_len = 100):
     '''
     Driver function to simulate learning by having the agent play a sequence of games.
     '''
+
     for ii in range(iters):
         # Make a new monkey object.
         swing = SwingyMonkey(sound=False,                  # Don't play sounds.
@@ -166,6 +174,10 @@ def run_games(learner, hist, iters = 100, t_len = 100):
 
         # Reset the state of the learner.
         learner.reset()
+
+        if(ii%5000 == 0):
+            np.save("Q_matrix_iteration_"+str(ii), np.array(learner.Q))
+            print("SAVING!")
     pg.quit()
     return
 
@@ -179,7 +191,7 @@ if __name__ == '__main__':
 	hist = []
 
 	# Run games. 
-	run_games(agent, hist, 2000, 1)
+	run_games(agent, hist, 2000000, 1)
 
 	# Save history. 
 	np.save('hist',np.array(hist))
