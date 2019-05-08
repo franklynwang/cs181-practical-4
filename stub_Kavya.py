@@ -152,10 +152,26 @@ class QLearner(object):
 
         self.last_reward = reward
 
+    def editQValues(self):
+        for ind1 in range(len(self.Q)):
+            for ind2 in range(len(self.Q[0])):
+                for ind3 in range(len(self.Q[0][0])):
+                    for ind4 in range(len(self.Q[0][0][0])):
+                        for ind5 in range(len(self.Q[0][0][0][0])):
+                            for act in range(len(self.Q[0][0][0][0][0])):
+                                if((ind3 < 3) and (ind1 < 10)):
+                                    self.updateQ([ind1, ind2, ind3, ind4, ind5], act, min(0.5*(ind3-5)*(ind1-10),0))
+                                #else:
+                                    #self.updateQ([ind1, ind2, ind3, ind4, ind5], act, min(4*(40-ind3-10), 0))
+
+
 def run_games(learner, hist, iters = 100, t_len = 100):
     '''
     Driver function to simulate learning by having the agent play a sequence of games.
     '''
+
+    #learner.setQ(np.load('Q_matrix_iteration_5000.npy'))
+    learner.editQValues()
 
     for ii in range(iters):
         # Make a new monkey object.
@@ -176,7 +192,7 @@ def run_games(learner, hist, iters = 100, t_len = 100):
         learner.reset()
 
         if(ii%5000 == 0):
-            np.save("Q_matrix_iteration_"+str(ii), np.array(learner.Q))
+            np.save("Q_matrix_iteration_editedvalues_"+str(ii), np.array(learner.Q))
             print("SAVING!")
     pg.quit()
     return
