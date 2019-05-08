@@ -55,7 +55,7 @@ class QLearner(object):
         self.last_state = None
         self.last_action = None
         self.last_reward = None
-        temp = np.zeros((60, 40, 20, 2, 2))
+        temp = np.zeros((60, 10, 40, 20, 2, 2))
         # temp.fill(50.0)
         self.Q = list(temp)
         self.frameNumber = 0
@@ -69,13 +69,13 @@ class QLearner(object):
         self.last_reward = None
         self.frameNumber = 0
         self.learningRate = 0.9
-        self.epsilon = 0.3
+        self.epsilon = 0.2
 
     def accessQ(self, state, action):
-        return self.Q[state[0]][state[1]][state[2]][state[3]][int(action)]
+        return self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][int(action)]
 
     def updateQ(self, state, action, val):
-        self.Q[state[0]][state[1]][state[2]][state[3]][int(action)] = val
+        self.Q[state[0]][state[1]][state[2]][state[3]][state[4]][int(action)] = val
 
     def setLR(self, lr):
         self.learningRate = lr
@@ -95,23 +95,17 @@ class QLearner(object):
         # Return 0 to swing and 1 to jump.
 
         self.frameNumber += 1
-        if(self.frameNumber < 5000):
-            self.epsilon = 0.1
-            self.learningRate = 0.9
-        if(self.frameNumber > 5000):
-            self.epsilon = 0.01
-            self.learningRate = 0.07
 
         if (self.frameNumber == 1):
             self.frameOneVelocity = state['monkey']['vel']
             self.last_action = 0
 
             index1 = int(state['tree']['dist'] // 10)
-            #index2 = int((state['monkey']['vel'] + 50) // 5)
+            index2 = int((state['monkey']['vel'] + 50) // 10)
             index3 = int(state['monkey']['bot'] // 10)
             index4 = int(state['tree']['bot'] // 10)
 
-            self.last_state = [index1, index3, index4, 0]
+            self.last_state = [index1, index2, index3, index4, 0]
             self.last_reward = 0
 
             return bool(self.last_action)
@@ -124,25 +118,25 @@ class QLearner(object):
                 self.gravity = 1
 
         index1 = int(state['tree']['dist'] // 10)
-        #index2 = int((state['monkey']['vel'] + 50) // 5)
+        index2 = int((state['monkey']['vel'] + 50) // 10)
         index3 = int(state['monkey']['bot'] // 10)
         index4 = int(state['tree']['bot'] // 10)
 
-        currentState = [index1, index3, index4, int(self.gravity)]
+        currentState = [index1, index2, index3, index4, int(self.gravity)]
         print(self.last_state)
         print(self.last_action)
         actionVals = [self.last_reward + self.discount * self.accessQ(currentState, a) for a in range(0, 2)]
 
-        print("THE Q VALUE was: " + str(self.accessQ(self.last_state, self.last_action)))
+        #print("THE Q VALUE was: " + str(self.accessQ(self.last_state, self.last_action)))
         self.updateQ(self.last_state, self.last_action, (1 - self.learningRate) * self.accessQ(self.last_state,
-                                                                                               self.last_action) + self.learningRate * max(
-            actionVals))
+                                                                                               self.last_action) + self.learningRate * max(actionVals))
 
-        if (npr.random() < 0.2):
-            print("THE Q VALUE HAS BEEN UPDATED TO: " + str(self.accessQ(self.last_state, self.last_action)))
+        #if (npr.random() < 0.2):
+            #print("THE Q VALUE HAS BEEN UPDATED TO: " + str(self.accessQ(self.last_state, self.last_action)))
 
         if (npr.random() < self.epsilon):
             new_action = npr.randint(0, 1)
+            print("RANDOM ACTION.")
         else:
             new_action = actionVals.index(max(actionVals))
         new_state = currentState
@@ -160,13 +154,19 @@ class QLearner(object):
 
     def editQValues(self):
         for ind1 in range(len(self.Q)):
-            for ind3 in range(len(self.Q[0])):
-                for ind4 in range(len(self.Q[0][0])):
-                    for ind5 in range(len(self.Q[0][0][0])):
-                        for act in range(len(self.Q[0][0][0][0])):
+            for ind2 in range(len(self.Q[0])):
+                for ind3 in range(len(self.Q[0][0])):
+                    for ind4 in range(len(self.Q[0][0][0])):
+                        for ind5 in range(len(self.Q[0][0][0][0])):
+                            for act in range(len(self.Q[0][0][0][0][0])):
                                 if ((ind1 < 10) and (ind3 < ind4)): #if it's actually below, this is important. 
-                                    self.updateQ([ind1, ind3, ind4, ind5], 0,
+                                    self.updateQ([ind1, ind2, ind3, ind4, ind5], 0,
                                                  min(0.5 * (10 - ind1) * (ind3 - ind4), 0))
+                                    self.updateQ([ind1, ind2, ind3, ind4, ind5], 1,
+                                                 min(0.2 * (10 - ind1) * (ind3 - ind4), 0))
+                                elif(ind3 < 4):
+                                    self.updateQ([ind1, ind2, ind3, ind4, ind5], 0, min(-0.1*(5-ind3), 0))
+                                    self.updateQ([ind1, ind2, ind3, ind4, ind5], 1, min(-0.05 * (5 - ind3), 0))
 
 
 def run_games(learner, hist, iters=100, t_len=100):
@@ -174,8 +174,8 @@ def run_games(learner, hist, iters=100, t_len=100):
     Driver function to simulate learning by having the agent play a sequence of games.
     '''
 
-    learner.setQ(np.load('Q_matrix_iteration_editedvalues_5000.npy'))
-    #learner.editQValues()
+    #learner.setQ(np.load('Q_matrix_iteration_editedvalues_5000.npy'))
+    learner.editQValues()
 
     for ii in range(iters):
         # Make a new monkey object.
@@ -184,6 +184,10 @@ def run_games(learner, hist, iters=100, t_len=100):
                              tick_length=t_len,  # Make game ticks super fast.
                              action_callback=learner.action_callback,
                              reward_callback=learner.reward_callback)
+
+        if(iters > 0 and iters%200 == 0):
+            learner.learningRate = learner.learningRate/1.5
+            learner.epsilon = learner.epsilon/1.5
 
         # Loop until you hit something.
         while swing.game_loop():
@@ -195,8 +199,9 @@ def run_games(learner, hist, iters=100, t_len=100):
         # Reset the state of the learner.
         learner.reset()
 
-        if (ii % 5000 == 0):
-            np.save("Q_matrix_iteration_editedvalues_round2_" + str(ii), np.array(learner.Q))
+        if (ii % 500 == 0):
+            np.save("Q_matrix_iteration_corrected_continuous_" + str(ii), np.array(learner.Q))
+            np.save('hist_corrected_continuous_'+ str(ii), np.array(hist))
             print("SAVING!")
     pg.quit()
     return
@@ -210,7 +215,4 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 15000, 1)
-
-    # Save history.
-    np.save('hist_second5000_editedvalues_round2', np.array(hist))
+    run_games(agent, hist, 15001, 1)
