@@ -95,12 +95,15 @@ class QLearner(object):
         # Return 0 to swing and 1 to jump.
 
         self.frameNumber += 1
-        if(self.frameNumber < 5000):
-            self.epsilon = 0.1
-            self.learningRate = 0.9
-        if(self.frameNumber > 5000):
-            self.epsilon = 0.01
-            self.learningRate = 0.07
+        #if(self.frameNumber < 5000):
+        #    self.epsilon = 0.1
+        #    self.learningRate = 0.9
+        #if(self.frameNumber > 5000):
+        #    self.epsilon = 0.01
+        #    self.learningRate = 0.7
+
+        self.epsilon = 0.0
+        self.learningRate = 0.0
 
         if (self.frameNumber == 1):
             self.frameOneVelocity = state['monkey']['vel']
@@ -133,13 +136,12 @@ class QLearner(object):
         print(self.last_action)
         actionVals = [self.last_reward + self.discount * self.accessQ(currentState, a) for a in range(0, 2)]
 
-        print("THE Q VALUE was: " + str(self.accessQ(self.last_state, self.last_action)))
+        #print("THE Q VALUE was: " + str(self.accessQ(self.last_state, self.last_action)))
         self.updateQ(self.last_state, self.last_action, (1 - self.learningRate) * self.accessQ(self.last_state,
                                                                                                self.last_action) + self.learningRate * max(
             actionVals))
 
-        if (npr.random() < 0.2):
-            print("THE Q VALUE HAS BEEN UPDATED TO: " + str(self.accessQ(self.last_state, self.last_action)))
+        #print("THE Q VALUE HAS BEEN UPDATED TO: " + str(self.accessQ(self.last_state, self.last_action)))
 
         if (npr.random() < self.epsilon):
             new_action = npr.randint(0, 1)
@@ -149,7 +151,7 @@ class QLearner(object):
 
         self.last_action = new_action
         self.last_state = new_state
-        print(self.last_reward)
+        #print(self.last_reward)
 
         return bool(self.last_action)
 
@@ -174,7 +176,7 @@ def run_games(learner, hist, iters=100, t_len=100):
     Driver function to simulate learning by having the agent play a sequence of games.
     '''
 
-    learner.setQ(np.load('Q_matrix_iteration_editedvalues_5000.npy'))
+    learner.setQ(np.load('Q_matrix_iteration_editedvalues_15000.npy'))
     #learner.editQValues()
 
     for ii in range(iters):
@@ -195,9 +197,9 @@ def run_games(learner, hist, iters=100, t_len=100):
         # Reset the state of the learner.
         learner.reset()
 
-        if (ii % 5000 == 0):
-            np.save("Q_matrix_iteration_editedvalues_round2_" + str(ii), np.array(learner.Q))
-            print("SAVING!")
+        #if (ii % 5000 == 0):
+        #    np.save("Q_matrix_iteration_editedvalues_2_" + str(ii), np.array(learner.Q))
+        #    print("SAVING!")
     pg.quit()
     return
 
@@ -210,7 +212,7 @@ if __name__ == '__main__':
     hist = []
 
     # Run games.
-    run_games(agent, hist, 15000, 1)
+    run_games(agent, hist, 5000, 1)
 
     # Save history.
-    np.save('hist_second5000_editedvalues_round2', np.array(hist))
+    np.save('hist_testing_editedvalues', np.array(hist))
