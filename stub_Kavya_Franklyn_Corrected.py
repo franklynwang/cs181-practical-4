@@ -169,12 +169,12 @@ class QLearner(object):
                                     self.updateQ([ind1, ind2, ind3, ind4, ind5], 1, min(-0.05 * (5 - ind3), 0))
 
 
-def run_games(learner, hist, iters=100, t_len=100):
+def run_games(learner, hist, iters=100, t_len=100, warm_start=False):
     '''
     Driver function to simulate learning by having the agent play a sequence of games.
     '''
-
-    #learner.setQ(np.load('Q_matrix_iteration_editedvalues_5000.npy'))
+    if warm_start == True:
+        learner.setQ(np.load('Q_matrix_iteration_editedvalues_5000.npy'))
     learner.editQValues()
 
     for ii in range(iters):
