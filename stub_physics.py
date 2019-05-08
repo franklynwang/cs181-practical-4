@@ -4,6 +4,7 @@ import numpy.random as npr
 import pygame as pg
 import random
 import math
+import matplotlib.pyplot as plt
 
 from SwingyMonkey import SwingyMonkey
 
@@ -15,13 +16,13 @@ class Learner(object):
 	def __init__(self):
 		# Non-fixed
 		self.bot_buff = 50
-		self.top_buff = 100
+		self.top_buff = 50
 		
 		# Fixed
 		self.impulse = 15
 		self.horiz_speed = 25
 		self.round = 1
-		self.eta = 0.1
+		self.eta = 0.5
 		self.epsilon = 0
 		self.Qarr = np.zeros([2, 3, 2, 2], dtype=float)
 		
@@ -40,6 +41,8 @@ class Learner(object):
 		# Jump if needed
 		#self.Qarr[:, :, 1, 1] = 100
 		
+		self.grav_list = []
+		
 		# Defaults
 		self.last_state	 = None
 		self.last_state_vec = None
@@ -50,22 +53,17 @@ class Learner(object):
 		
 
 	def reset(self):
-		print(self.last_state['score'], np.sum(np.square(self.Qarr)))
+		#print(self.last_state['score'], np.sum(np.square(self.Qarr)))
 		self.round += 1
+		
+		self.grav_list.append(self.grav_memory)
+		print(self.grav_list)
 			
 		self.last_state	 = None
 		self.last_state_vec = None
 		self.last_action = None
 		self.last_reward = None
 		self.grav_memory = None
-		
-	def monkey_bot_bucket(self, m_bot):
-		if m_bot < self.bot_buff:
-			return 0
-		elif m_bot > (343 - self.top_buff):
-			return 2
-		else:
-			return 1
 			
 	def y_at_tree_dist_if_jump (self, tree_dist, y_0, grav_high):
 		y = y_0
@@ -76,26 +74,44 @@ class Learner(object):
 			y -= 0.5 * 1 * (tree_dist / self.horiz_speed) ** 2
 		return y
 		
-	def fall_next_frame (self, tree_dist, y_0, grav_high):
-		return 0
+	def y_at_apex_of_jump (self, y_0, grav_high):
+		if grav_high == 1:
+			y = y_0 + self.impulse ** 2 / (2 * 4)
+		else:
+			y = y_0 + self.impulse ** 2 / (2 * 1)
+		return y
 	
-	def should_jump (self, tree_dist, y_0, grav_high):
+	def will_clear_tree (self, tree_dist, y_0, grav_high):
 		y_at_tree = self.y_at_tree_dist_if_jump(tree_dist, y_0, grav_high)
 		if y_at_tree < 100 and y_0 < 50:
 			return 1
 		else:
 			return 0
 			
+	def will_jump_off_top (self, y_0, grav_high):
+		if self.y_at_apex_of_jump(y_0, grav_high) > self.top_buff:
+			return 1
+		else:
+			return 0
+			
+	def monkey_bot_bucket(self, m_bot, grav_high):
+		if m_bot < self.bot_buff:
+			return 0
+		elif self.will_jump_off_top (m_bot, grav_high):
+			return 2
+		else:
+			return 1
+			
 	def create_state_vec(self, state):
 		state_vec = []
 		state_vec.append(self.grav_memory)
-		state_vec.append(self.monkey_bot_bucket(state['monkey']['bot']))
+		state_vec.append(self.monkey_bot_bucket(state['monkey']['bot'], self.grav_memory))
 		y_0 = state['monkey']['bot'] - state['tree']['bot']
 		tree_dist = state['tree']['dist'] - 31
 		if tree_dist < 0:
 			state_vec.append(0)
 		else:
-			state_vec.append(self.should_jump(tree_dist, y_0, self.grav_memory))
+			state_vec.append(self.will_clear_tree(tree_dist, y_0, self.grav_memory))
 		return state_vec
 		
 	def action_callback(self, state):
@@ -116,12 +132,12 @@ class Learner(object):
 				self.grav_memory = 1
 			self.last_state_vec = self.create_state_vec(self.last_state)
 			
-		print(self.Qarr)
+		#print(self.Qarr)
 				
 		state_vec = self.create_state_vec(state)
-		print(state)
-		print(state_vec)
-		print(self.last_action)
+		#print(state)
+		#print(state_vec)
+		#print(self.last_action)
 		
 		old_state_index = self.last_state_vec
 		
@@ -196,10 +212,16 @@ if __name__ == '__main__':
 	hist = []
 
 	# Run games. 
-	run_games(agent, hist, 200, 10)
+	run_games(agent, hist, 50, 10)
 
 	print(hist)
 	# Save history. 
 	np.save('hist',np.array(hist))
+	
+	plt.plot(hist)
+	plt.xlabel('epoch')
+	plt.xticks([0, 5, 10, 15, 20,25,30,35,40,45,50])
+	plt.ylabel('score')
+	plt.show()
 
 
